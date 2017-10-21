@@ -1,5 +1,6 @@
 package com.github.telegram.mvc;
 
+import com.github.telegram.mvc.api.TelegramSession;
 import com.github.telegram.mvc.config.*;
 import com.google.common.collect.Lists;
 import com.pengrad.telegrambot.TelegramBot;
@@ -11,9 +12,13 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
@@ -58,6 +63,12 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
         return requestDispatcher;
     }
 
+    @Bean
+    @Scope(value = TelegramScope.SCOPE, proxyMode = ScopedProxyMode.TARGET_CLASS)
+    TelegramSession telegramSession() {
+        return new TelegramSession();
+    }
+
     private void registerTelegramBotService(RequestDispatcher requestDispatcher, List<TelegramMvcConfiguration> telegramMvcConfigurations, TaskExecutor taskExecutorLocal) {
         TelegramBotProperties telegramBotProperties = getTelegramBotProperties(telegramMvcConfigurations);
         if (!telegramBotProperties.iterator().hasNext()) {
@@ -92,6 +103,19 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
             }
         }
         return defaultOkHttpClient;
+    }
+
+    @Bean
+    @Order()
+    ApplicationListener<ContextRefreshedEvent> ruunerTelegramService(List<TelegramService> telegramServices) {
+        return new ApplicationListener<ContextRefreshedEvent>() {
+            @Override
+            public void onApplicationEvent(ContextRefreshedEvent event) {
+                for (TelegramService telegramService : telegramServices) {
+                    telegramService.start();
+                }
+            }
+        };
     }
 
     private TelegramBot createTelegramBot(TelegramBotProperty telegramBotProperty) {
