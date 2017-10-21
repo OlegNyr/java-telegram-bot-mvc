@@ -1,0 +1,34 @@
+apply plugin: 'java'
+apply plugin: 'jacoco'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+compileTestJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+dependencies {
+    compile 'com.github.pengrad:java-telegram-bot-api:3.4.0'
+    compile 'org.springframework:spring-context:4.3.11.RELEASE'
+    compile 'org.springframework:spring-web:4.3.11.RELEASE'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    compile group: 'com.google.guava', name: 'guava', version: '23.0'
+}
+
+jacoco {
+    // See https://github.com/jacoco/jacoco/releases
+    toolVersion = '0.7.5.201505241946'
+    reportsDir = file("$buildDir/customJacocoReportDir")
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        csv.enabled true
+        html.destination "${buildDir}/reports/jacoco/test"
+    }
+}
+
+apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
