@@ -28,7 +28,15 @@ public class HandlerAdapter {
         this.returnValueHandlers = new BotHandlerMethodReturnValueHandlerComposite().addHandlers(handlers);
     }
 
-    public BaseRequest handle(TelegramRequest telegramRequest, HandlerMethod handlerMethod) throws Exception {
+    /**
+     * Вызывает медот представленный в handlerMethod
+     *
+     * @param telegramRequest описание сообщение
+     * @param handlerMethod   описание медода который нужно вызвать
+     * @return Возвращает ответ который нужно передать пользователь
+     * @throws Exception пробрасывает все ошибки
+     */
+    BaseRequest handle(TelegramRequest telegramRequest, HandlerMethod handlerMethod) throws Exception {
         TelegramInvocableHandlerMethod invocableMethod = new TelegramInvocableHandlerMethod(handlerMethod);
         invocableMethod.setHandlerMethodArgumentResolvers(this.argumentResolvers);
         invocableMethod.setHandlerMethodReturnValueHandlers(this.returnValueHandlers);
