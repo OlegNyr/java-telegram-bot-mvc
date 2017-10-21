@@ -1,5 +1,5 @@
 rootProject.name = 'java-telegram-bot-mvc'
 
 include 'library'
-//include 'sample'
+include 'sample'
 

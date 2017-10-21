@@ -27,3 +27,7 @@ nbdist/
 /.gradletasknamecache
 !/library/build/
 /library/out/
+/sample/src/main/resources/application-dev.yaml
+Будет удалено library/src/main/resources/
+Будет удалено library/src/test/
+Будет удалено sample/src/test/

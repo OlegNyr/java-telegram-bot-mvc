@@ -1,7 +1,7 @@
 package com.github.telegram.mvc.config;
 
 /**
- * todo:java doc
+ * Интерфейс конфигурации бота
  */
 public interface TelegramMvcConfiguration {
     void configuration(TelegramBotBuilder telegramBotBuilder);
