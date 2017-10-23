@@ -11,7 +11,6 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.stereotype.Controller;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -52,33 +51,30 @@ public class TelegramControllerBeanPostProcessor implements BeanPostProcessor, S
                     }
                 } else {
                     // Non-empty set of methods
-                    for (Map.Entry<Method, RequestMappingInfo> entry : annotatedMethods.entrySet()) {
-                        Method invocableMethod = AopUtils.selectInvocableMethod(entry.getKey(), targetClass);
-                        botHandlerMethodContainer.registerController(bean, invocableMethod, entry.getValue());
-                    }
+                    annotatedMethods.forEach((method, mappingInfo) -> {
+                        Method invocableMethod = AopUtils.selectInvocableMethod(method, targetClass);
+                        botHandlerMethodContainer.registerController(bean, invocableMethod, mappingInfo);
+                    });
                 }
+            } else {
+                nonAnnotatedClasses.add(targetClass);
             }
-        } else {
-            nonAnnotatedClasses.add(targetClass);
         }
         return bean;
     }
 
     private Map<Method, RequestMappingInfo> findAnnotatedMethodsBotRequest(Class<?> targetClass) {
         return MethodIntrospector.selectMethods(targetClass,
-                new MethodIntrospector.MetadataLookup<RequestMappingInfo>() {
-                    @Override
-                    public RequestMappingInfo inspect(Method method) {
-                        BotRequest requestMapping = AnnotatedElementUtils.findMergedAnnotation(method, BotRequest.class);
-                        if (requestMapping == null) return null;
+                (MethodIntrospector.MetadataLookup<RequestMappingInfo>) method -> {
+                    BotRequest requestMapping = AnnotatedElementUtils.findMergedAnnotation(method, BotRequest.class);
+                    if (requestMapping == null) return null;
 
-                        return RequestMappingInfo
-                                .newBuilder()
-                                .path(requestMapping.path())
-                                .messageType(requestMapping.messageType())
-                                .build();
+                    return RequestMappingInfo
+                            .newBuilder()
+                            .path(requestMapping.path())
+                            .messageType(requestMapping.messageType())
+                            .build();
 
-                    }
                 });
     }
 
