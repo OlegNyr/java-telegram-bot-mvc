@@ -60,6 +60,4 @@ public class SampleTelegramBotMvcMain implements TelegramMvcConfiguration {
 
         return new SendMessage(chatId, "I test bot");
     }
-
-
 }
