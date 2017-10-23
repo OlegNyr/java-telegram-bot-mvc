@@ -8,7 +8,6 @@ import java.util.List;
 
 public class BotHandlerMethodReturnValueHandlerComposite implements BotHandlerMethodReturnValueHandler {
 
-
     private final List<BotHandlerMethodReturnValueHandler> returnValueHandlers = new ArrayList<>();
 
     @Override

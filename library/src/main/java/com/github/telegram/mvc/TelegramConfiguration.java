@@ -2,6 +2,8 @@ package com.github.telegram.mvc;
 
 import com.github.telegram.mvc.api.TelegramSession;
 import com.github.telegram.mvc.config.*;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.pengrad.telegrambot.TelegramBot;
 import okhttp3.Dispatcher;
@@ -19,7 +21,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.ConversionService;
@@ -32,7 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.base.Suppliers.*;
 
 /**
  * Конфигурирование бинов
@@ -44,7 +45,6 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
     private static final String TELEGRAM_BOT_TOKEN = "telegram.bot.token";
     private Environment environment;
     private ConfigurableListableBeanFactory beanFactory;
-    private OkHttpClient defaultOkHttpClient;
 
     @Bean
     RequestDispatcher requestDispatcher(ConversionService conversionService,
@@ -59,8 +59,20 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
             taskExecutorLocal = threadPoolTaskExecutor;
         }
         RequestDispatcher requestDispatcher = new RequestDispatcher(handlerMethodContainer(), new HandlerAdapter(conversionService), taskExecutorLocal);
-        registerTelegramBotService(requestDispatcher, telegramMvcConfigurations, taskExecutorLocal);
+        registerTelegramBotService(requestDispatcher, telegramMvcConfigurations, getOkHttpClientSupplier(taskExecutorLocal));
         return requestDispatcher;
+    }
+
+    private Supplier<OkHttpClient> getOkHttpClientSupplier(TaskExecutor taskExecutorLocal) {
+        return new Supplier<OkHttpClient>() {
+            @Override
+            public OkHttpClient get() {
+                return new OkHttpClient()
+                        .newBuilder()
+                        .dispatcher(new Dispatcher(new ExecutorServiceAdapter(taskExecutorLocal)))
+                        .build();
+            }
+        };
     }
 
     @Bean
@@ -69,7 +81,7 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
         return new TelegramSession();
     }
 
-    private void registerTelegramBotService(RequestDispatcher requestDispatcher, List<TelegramMvcConfiguration> telegramMvcConfigurations, TaskExecutor taskExecutorLocal) {
+    private void registerTelegramBotService(RequestDispatcher requestDispatcher, List<TelegramMvcConfiguration> telegramMvcConfigurations, Supplier<OkHttpClient> httpClientSupplier) {
         TelegramBotProperties telegramBotProperties = getTelegramBotProperties(telegramMvcConfigurations);
         if (!telegramBotProperties.iterator().hasNext()) {
             logger.warn("Не найдено не одной настройки бота");
@@ -80,7 +92,7 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
                     telegramBotProperty =
                             TelegramBotProperty
                                     .newBuilder(telegramBotProperty)
-                                    .okHttpClient(getDefaultOkHttp(taskExecutorLocal))
+                                    .okHttpClient(memoize(httpClientSupplier).get())
                                     .build();
                 }
 
@@ -91,23 +103,9 @@ public class TelegramConfiguration implements BeanFactoryPostProcessor, Environm
         }
     }
 
-    private OkHttpClient getDefaultOkHttp(TaskExecutor taskExecutorLocal) {
-        if (defaultOkHttpClient == null) {
-            synchronized (taskExecutorLocal) {
-                if (defaultOkHttpClient == null) {
-                    defaultOkHttpClient = new OkHttpClient()
-                            .newBuilder()
-                            .dispatcher(new Dispatcher(new ExecutorServiceAdapter(taskExecutorLocal)))
-                            .build();
-                }
-            }
-        }
-        return defaultOkHttpClient;
-    }
-
     @Bean
     @Order()
-    ApplicationListener<ContextRefreshedEvent> ruunerTelegramService(List<TelegramService> telegramServices) {
+    ApplicationListener<ContextRefreshedEvent> runnerTelegramService(List<TelegramService> telegramServices) {
         return new ApplicationListener<ContextRefreshedEvent>() {
             @Override
             public void onApplicationEvent(ContextRefreshedEvent event) {

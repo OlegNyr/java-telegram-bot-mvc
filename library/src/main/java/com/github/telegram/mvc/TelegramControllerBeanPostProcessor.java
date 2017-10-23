@@ -10,6 +10,8 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.stereotype.Controller;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -40,11 +42,11 @@ public class TelegramControllerBeanPostProcessor implements BeanPostProcessor, S
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = AopUtils.getTargetClass(bean);
-        if (!this.nonAnnotatedClasses.contains(targetClass)) {
-            if (targetClass.isAnnotationPresent(BotController.class)) {
+        if (!nonAnnotatedClasses.contains(targetClass)) {
+            if (AnnotationUtils.findAnnotation(targetClass, BotController.class) != null) {
                 Map<Method, RequestMappingInfo> annotatedMethods = findAnnotatedMethodsBotRequest(targetClass);
                 if (annotatedMethods.isEmpty()) {
-                    this.nonAnnotatedClasses.add(targetClass);
+                    nonAnnotatedClasses.add(targetClass);
                     if (logger.isTraceEnabled()) {
                         logger.trace("No @BotRequest annotations found on bean class: {}", bean.getClass());
                     }
@@ -56,6 +58,8 @@ public class TelegramControllerBeanPostProcessor implements BeanPostProcessor, S
                     }
                 }
             }
+        } else {
+            nonAnnotatedClasses.add(targetClass);
         }
         return bean;
     }
